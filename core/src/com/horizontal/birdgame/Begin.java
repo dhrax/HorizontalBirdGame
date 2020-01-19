@@ -6,11 +6,13 @@ import com.badlogic.gdx.graphics.FPSLogger;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Vector2;
 
 public class Begin extends ApplicationAdapter {
-	SpriteBatch batch;
+	SpriteBatch batch; //util para dibujar la misma textura en diferentes posiciones (mejora de rendimiento)
 	Texture img;
 	FPSLogger fpsLogger;
 	OrthographicCamera camera; //OrthographicCamera: sirve como ventana del juego, es muy util para juegos 2D donde
@@ -20,6 +22,13 @@ public class Begin extends ApplicationAdapter {
 	Texture background;
 	TextureRegion terrainBelow, terrainAbove;
 	float terrainOffset;
+	Animation pajaro;
+	float pajaroAnimTime;
+	Vector2 planeVelocity = new Vector2();
+	Vector2 planePosition= new Vector2();
+	Vector2 planeDefaultPosition= new Vector2();
+	Vector2 gravity= new Vector2();
+	private static final Vector2 damping = new Vector2(0.99f,0.99f); //funciona friccion para reducir la velocidad del pajaro
 
 	@Override
 	public void create () {
@@ -39,6 +48,17 @@ public class Begin extends ApplicationAdapter {
 		terrainBelow=new TextureRegion(new Texture("groundGrass.png"));
 		terrainAbove=new TextureRegion(terrainBelow);
 		terrainAbove.flip(true, true); //convierte terrainAbove en terrainBelow dado la vuelta
+
+		//TODO arreglar el frame 2
+		pajaro = new Animation(0.2f, new TextureRegion(new Texture("PNG/Dragon Orange/1.png")),
+				new TextureRegion(new Texture("PNG/Dragon Orange/2.png")),
+				new TextureRegion(new Texture("PNG/Dragon Orange/3.png")),
+				new TextureRegion(new Texture("PNG/Dragon Orange/4.png"))); //crea una animacion rotando los frames cada X tiempo
+		pajaro.setPlayMode(Animation.PlayMode.LOOP); //ya que la animacion es un bucle
+		pajaroAnimTime=0;
+
+
+		resetScene();
 	}
 
 	@Override
@@ -51,9 +71,18 @@ public class Begin extends ApplicationAdapter {
 	}
 	
 	@Override
-	public void dispose () {
+	public void dispose () { //destruimos para liberar memoria
 		batch.dispose();
 		img.dispose();
+	}
+
+	public void resetScene(){ //reseteamos la pantalla (cuando muramos)
+		terrainOffset=0;
+		pajaroAnimTime=0;
+		planeVelocity.set(400, 0);
+		gravity.set(0, -4);
+		planeDefaultPosition.set(400-120/2, 240-100/2); //120 ancho, 100 alto
+		planePosition.set(planeDefaultPosition.x, planeDefaultPosition.y);
 	}
 
 	private void updateScene(){
@@ -65,7 +94,19 @@ public class Begin extends ApplicationAdapter {
 		 slow devices. So, for 1 second, it will be 60 x 3.34 and 40 x 5 for these devices respectively,
 		 which is approximately 200 (the original value) in both cases. So, the movement in 1 second is 200 on both devices
 		 */
-		terrainOffset-=200*deltaTime; //valor utilizado para hacer que es terreno se mueva hacia la izquierda
+		pajaroAnimTime+=deltaTime;
+		planeVelocity.scl(damping); //reducimos velocidad
+		planeVelocity.add(gravity); //añadimos la gravedad a la trayectoria
+
+		planePosition.mulAdd(planeVelocity, deltaTime); //multiplica escalarmente
+		terrainOffset-=planePosition.x-planeDefaultPosition.x; //valor utilizado para hacer que es terreno se mueva hacia la izquierda
+		planePosition.x=planeDefaultPosition.x;
+
+		//comprobamos si hay que resetear el terreno para no ver el final
+		if(terrainOffset*-1>terrainBelow.getRegionWidth())
+			terrainOffset=0;
+		if(terrainOffset>0)
+			terrainOffset=-terrainBelow.getRegionWidth();
 	}
 
 	private void drawScene(){
@@ -81,6 +122,7 @@ public class Begin extends ApplicationAdapter {
 		batch.draw(terrainBelow, terrainOffset + terrainBelow. getRegionWidth(), 0);//se dibujan dos veces para dar la impresion de scroll infinito
 		batch.draw(terrainAbove, terrainOffset, 480 - terrainAbove. getRegionHeight());
 		batch.draw(terrainAbove, terrainOffset + terrainAbove. getRegionWidth(), 480 - terrainAbove.getRegionHeight());
+		batch.draw((TextureRegion) pajaro.getKeyFrame(pajaroAnimTime), planePosition.x, planePosition.y);
 		batch.end();
 	}
 }
