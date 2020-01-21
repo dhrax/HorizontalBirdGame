@@ -8,8 +8,11 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 
 public class Begin extends ApplicationAdapter {
 	SpriteBatch batch; //util para dibujar la misma textura en diferentes posiciones (mejora de rendimiento)
@@ -19,8 +22,7 @@ public class Begin extends ApplicationAdapter {
 								//se necesite una proyeccion Ortografica, es decir, donde no haya punto de fuga, por lo
 								//que todos los elementos se encuentran en la misma escala, da igual donde nos encontremos.
 								//Tambien realiza todas las operaciones para la vista automaticamente.
-	Texture background;
-	TextureRegion terrainBelow, terrainAbove;
+	TextureRegion background, terrainBelow, terrainAbove;
 	float terrainOffset;
 	Animation pajaro;
 	float pajaroAnimTime;
@@ -29,6 +31,8 @@ public class Begin extends ApplicationAdapter {
 	Vector2 planeDefaultPosition= new Vector2();
 	Vector2 gravity= new Vector2();
 	private static final Vector2 damping = new Vector2(0.99f,0.99f); //funciona friccion para reducir la velocidad del pajaro
+
+	Viewport viewport; //se utiliza para hacer responsive la palicacion en diferentes resoluciones y tamaños de pantalla
 
 	@Override
 	public void create () {
@@ -42,20 +46,27 @@ public class Begin extends ApplicationAdapter {
 			float h = Gdx.graphics.getHeight();
 			cam = new OrthographicCamera(30, 30 * (h / w));
 		 */
-		camera.setToOrtho(false, 800, 480);
-		background = new Texture("background.png");
+		//camera.setToOrtho(false, 800, 480); //no hace falta esta linea, porque al implementar eñ VIewPort, la de abajo la sustituye
+		camera.position.set(400,240,0);
+		viewport = new FitViewport(800, 480, camera);
 
-		terrainBelow=new TextureRegion(new Texture("groundGrass.png"));
+		//Texturas empaquetadas
+		TextureAtlas atlas = new
+				TextureAtlas(Gdx.files.internal("HorizontalBirdgame.pack"));
+		//background = new Texture("background.png"); //no hace falta ya que se ha creado un texture Atlas
+		background = atlas.findRegion("background");
+		//terrainBelow=new TextureRegion(new Texture("groundGrass.png")); //no hace falta ya que se ha creado un texture Atlas
+		terrainBelow = atlas.findRegion("groundGrass");
 		terrainAbove=new TextureRegion(terrainBelow);
 		terrainAbove.flip(true, true); //convierte terrainAbove en terrainBelow dado la vuelta
 
-		//TODO arreglar el frame 2
-		pajaro = new Animation(0.2f, new TextureRegion(new Texture("PNG/Dragon Orange/1.png")),
-				new TextureRegion(new Texture("PNG/Dragon Orange/2.png")),
-				new TextureRegion(new Texture("PNG/Dragon Orange/3.png")),
-				new TextureRegion(new Texture("PNG/Dragon Orange/4.png"))); //crea una animacion rotando los frames cada X tiempo
+		pajaro = new Animation(0.2f, atlas.findRegion("1"),
+				atlas.findRegion("2"),
+				atlas.findRegion("3"),
+				atlas.findRegion("4")); //crea una animacion rotando los frames cada X tiempo
 		pajaro.setPlayMode(Animation.PlayMode.LOOP); //ya que la animacion es un bucle
 		pajaroAnimTime=0;
+
 
 
 		resetScene();
@@ -124,5 +135,13 @@ public class Begin extends ApplicationAdapter {
 		batch.draw(terrainAbove, terrainOffset + terrainAbove. getRegionWidth(), 480 - terrainAbove.getRegionHeight());
 		batch.draw((TextureRegion) pajaro.getKeyFrame(pajaroAnimTime), planePosition.x, planePosition.y);
 		batch.end();
+	}
+
+
+	//Sirve para que, al cambiar el tamaño de la ventana, el view port lo recoja y se actualice
+	@Override
+	public void resize (int width, int height)
+	{
+		viewport.update(width, height);
 	}
 }
