@@ -10,7 +10,9 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
@@ -33,6 +35,13 @@ public class Begin extends ApplicationAdapter {
 	private static final Vector2 damping = new Vector2(0.99f,0.99f); //funciona friccion para reducir la velocidad del pajaro
 
 	Viewport viewport; //se utiliza para hacer responsive la palicacion en diferentes resoluciones y tamaños de pantalla
+
+	Vector3 tocadoPantalla = new Vector3();
+	Vector2 tmpVector = new Vector2(); //indicador para mostrar donde se ha realizado la ultima pulsacion
+	private static final int TOUCH_IMPULSE=500;
+	TextureRegion tapIndicator;
+	float tapDrawTime;
+	private static final float TAP_DRAW_TIME_MAX=1.0f;
 
 	@Override
 	public void create () {
@@ -67,7 +76,7 @@ public class Begin extends ApplicationAdapter {
 		pajaro.setPlayMode(Animation.PlayMode.LOOP); //ya que la animacion es un bucle
 		pajaroAnimTime=0;
 
-
+		tapIndicator = atlas.findRegion("tap2");
 
 		resetScene();
 	}
@@ -105,6 +114,26 @@ public class Begin extends ApplicationAdapter {
 		 slow devices. So, for 1 second, it will be 60 x 3.34 and 40 x 5 for these devices respectively,
 		 which is approximately 200 (the original value) in both cases. So, the movement in 1 second is 200 on both devices
 		 */
+		if(Gdx.input.justTouched())
+		{
+			tocadoPantalla.set(Gdx.input.getX(),Gdx.input.getY(),0);
+			camera.unproject(tocadoPantalla);
+
+			//necesitamos estas dos líneas para realizar el cáculo entre la posicion del pajaro y donde se ha pulsado
+			tmpVector.set(planePosition.x,planePosition.y);
+			tmpVector.sub( tocadoPantalla.x, tocadoPantalla.y).nor(); //sustrae al vector sus parametros y .nor() lo normaliza
+			//se normaliza para saber la direccion del vector
+
+			planeVelocity.mulAdd(tmpVector,
+					//Aqui, nos aseguramos de que se restringe el valor que se añade, para que no salga de los límites
+					TOUCH_IMPULSE- MathUtils.clamp(Vector2.dst(tocadoPantalla.x,
+							tocadoPantalla.y, planePosition.x, planePosition.y), 0,
+							TOUCH_IMPULSE));
+			tapDrawTime=TAP_DRAW_TIME_MAX;
+		}
+		tapDrawTime-=deltaTime;
+
+
 		pajaroAnimTime+=deltaTime;
 		planeVelocity.scl(damping); //reducimos velocidad
 		planeVelocity.add(gravity); //añadimos la gravedad a la trayectoria
@@ -134,6 +163,13 @@ public class Begin extends ApplicationAdapter {
 		batch.draw(terrainAbove, terrainOffset, 480 - terrainAbove. getRegionHeight());
 		batch.draw(terrainAbove, terrainOffset + terrainAbove. getRegionWidth(), 480 - terrainAbove.getRegionHeight());
 		batch.draw((TextureRegion) pajaro.getKeyFrame(pajaroAnimTime), planePosition.x, planePosition.y);
+
+		if(tapDrawTime>0)
+		{
+			batch.draw(tapIndicator, tocadoPantalla.x-60f,
+					tocadoPantalla.y-50f);
+//29.5 is half width/height of the image
+		}
 		batch.end();
 	}
 
