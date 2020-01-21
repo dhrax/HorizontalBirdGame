@@ -34,14 +34,23 @@ public class Begin extends ApplicationAdapter {
 	Vector2 gravity= new Vector2();
 	private static final Vector2 damping = new Vector2(0.99f,0.99f); //funciona friccion para reducir la velocidad del pajaro
 
-	Viewport viewport; //se utiliza para hacer responsive la palicacion en diferentes resoluciones y tamaños de pantalla
+	//TODO poner cuando se quiera hacer responsive
+	//Viewport viewport; //se utiliza para hacer responsive la palicacion en diferentes resoluciones y tamaños de pantalla
 
+	//TODO descomentar para el control tactil
+	/*
 	Vector3 tocadoPantalla = new Vector3();
 	Vector2 tmpVector = new Vector2(); //indicador para mostrar donde se ha realizado la ultima pulsacion
 	private static final int TOUCH_IMPULSE=500;
 	TextureRegion tapIndicator;
 	float tapDrawTime;
 	private static final float TAP_DRAW_TIME_MAX=1.0f;
+	*/
+
+
+	int orientation;
+	float accelX;
+	float accelY;
 
 	@Override
 	public void create () {
@@ -55,9 +64,11 @@ public class Begin extends ApplicationAdapter {
 			float h = Gdx.graphics.getHeight();
 			cam = new OrthographicCamera(30, 30 * (h / w));
 		 */
-		//camera.setToOrtho(false, 800, 480); //no hace falta esta linea, porque al implementar eñ VIewPort, la de abajo la sustituye
+		camera.setToOrtho(false, 800, 480); //no hace falta esta linea, porque al implementar eñ VIewPort, la de abajo la sustituye
+		/* Utilizado para mantener el tamaño de pantalla en distintos dispositivos
 		camera.position.set(400,240,0);
 		viewport = new FitViewport(800, 480, camera);
+		*/
 
 		//Texturas empaquetadas
 		TextureAtlas atlas = new
@@ -76,7 +87,11 @@ public class Begin extends ApplicationAdapter {
 		pajaro.setPlayMode(Animation.PlayMode.LOOP); //ya que la animacion es un bucle
 		pajaroAnimTime=0;
 
-		tapIndicator = atlas.findRegion("tap2");
+		//TODO descomentar para el control tactil
+		//tapIndicator = atlas.findRegion("tapTick");
+
+
+		orientation = Gdx.input.getRotation();
 
 		resetScene();
 	}
@@ -101,7 +116,7 @@ public class Begin extends ApplicationAdapter {
 		pajaroAnimTime=0;
 		planeVelocity.set(400, 0);
 		gravity.set(0, -4);
-		planeDefaultPosition.set(400-120/2, 240-100/2); //120 ancho, 100 alto
+		planeDefaultPosition.set(120/2, 100/2); //120 ancho, 100 alto
 		planePosition.set(planeDefaultPosition.x, planeDefaultPosition.y);
 	}
 
@@ -114,7 +129,11 @@ public class Begin extends ApplicationAdapter {
 		 slow devices. So, for 1 second, it will be 60 x 3.34 and 40 x 5 for these devices respectively,
 		 which is approximately 200 (the original value) in both cases. So, the movement in 1 second is 200 on both devices
 		 */
-		if(Gdx.input.justTouched())
+
+		/**
+		 * Esto permite desplazar el pajaro dependiendo de la posicion donde se pulse
+		 */
+		/*if(Gdx.input.justTouched())
 		{
 			tocadoPantalla.set(Gdx.input.getX(),Gdx.input.getY(),0);
 			camera.unproject(tocadoPantalla);
@@ -132,15 +151,21 @@ public class Begin extends ApplicationAdapter {
 			tapDrawTime=TAP_DRAW_TIME_MAX;
 		}
 		tapDrawTime-=deltaTime;
+		*/
 
+		//recoge los valores del acelerometro
+		accelX = Gdx.input.getAccelerometerX();
+		accelY = Gdx.input.getAccelerometerY();
+		planePosition.x+=accelY;
+		planePosition.y-=accelX;
 
 		pajaroAnimTime+=deltaTime;
 		planeVelocity.scl(damping); //reducimos velocidad
-		planeVelocity.add(gravity); //añadimos la gravedad a la trayectoria
+		//planeVelocity.add(gravity); //añadimos la gravedad a la trayectoria
 
 		planePosition.mulAdd(planeVelocity, deltaTime); //multiplica escalarmente
 		terrainOffset-=planePosition.x-planeDefaultPosition.x; //valor utilizado para hacer que es terreno se mueva hacia la izquierda
-		planePosition.x=planeDefaultPosition.x;
+		planePosition.x=planeDefaultPosition.x; // se resetea para que el terreno se dibuje bien (ya que el terreno depende de tu posicion)
 
 		//comprobamos si hay que resetear el terreno para no ver el final
 		if(terrainOffset*-1>terrainBelow.getRegionWidth())
@@ -164,20 +189,22 @@ public class Begin extends ApplicationAdapter {
 		batch.draw(terrainAbove, terrainOffset + terrainAbove. getRegionWidth(), 480 - terrainAbove.getRegionHeight());
 		batch.draw((TextureRegion) pajaro.getKeyFrame(pajaroAnimTime), planePosition.x, planePosition.y);
 
+		/* //TODO descomentar para el control tactil
 		if(tapDrawTime>0)
 		{
-			batch.draw(tapIndicator, tocadoPantalla.x-60f,
+			batch.draw(tapIndicator, tocadoPantalla.x-60f, //60 es la mitad del ancho y 50 la mitad del altop
 					tocadoPantalla.y-50f);
-//29.5 is half width/height of the image
 		}
+		*/
 		batch.end();
 	}
 
 
 	//Sirve para que, al cambiar el tamaño de la ventana, el view port lo recoja y se actualice
+	/*
 	@Override
 	public void resize (int width, int height)
 	{
 		viewport.update(width, height);
-	}
+	}*/
 }
