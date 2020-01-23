@@ -139,6 +139,7 @@ public class Begin extends ApplicationAdapter {
 	}
 
 	public void resetScene(){ //reseteamos la pantalla (cuando muramos)
+		pillars.clear();
 		terrainOffset=0;
 		pajaroAnimTime=0;
 		planeVelocity.set(400, 0);
@@ -146,6 +147,7 @@ public class Begin extends ApplicationAdapter {
 		planeDefaultPosition.set(50, 190);
 		planePosition.set(planeDefaultPosition.x, planeDefaultPosition.y);
 		scrollVelocity.set(4, 0);
+		obstacleRect.set(0, 0,0 , 0); //reseteo sus valores para poder reiniciar partida
 	}
 
 	private void updateScene(){
@@ -157,23 +159,22 @@ public class Begin extends ApplicationAdapter {
 		 slow devices. So, for 1 second, it will be 60 x 3.34 and 40 x 5 for these devices respectively,
 		 which is approximately 200 (the original value) in both cases. So, the movement in 1 second is 200 on both devices
 		 */
-
+		if(gameState == GameState.GAME_OVER)
+		{
+			if(Gdx.input.justTouched()){
+				gameState = GameState.INIT;
+				resetScene();
+			}
+			return;
+		}
 			if(gameState == GameState.INIT)
 			{
-				if(Gdx.input.justTouched()){
+				if(Gdx.input.justTouched())
 					gameState = GameState.ACTION;
-				}
 				return;
 			}
-			if(gameState == GameState.GAME_OVER)
-			{
-				if(Gdx.input.justTouched()){
-					gameState = GameState.INIT;
-					resetScene();
 
-				}
-				return;
-			}
+
 
 		/**
 		 * Esto permite desplazar el pajaro dependiendo de la posicion donde se pulse
@@ -201,8 +202,9 @@ public class Begin extends ApplicationAdapter {
 		//recoge los valores del acelerometro
 		//TODO descomentar para el control por giroscopio
 		accelX = Gdx.input.getAccelerometerX();
-		accelY = Gdx.input.getAccelerometerY();
-		planePosition.x+=accelY;
+		//lo comento porque no hacen falta ya que tenemos una velocidad predeterminada
+		//accelY = Gdx.input.getAccelerometerY();
+		//planePosition.x+=accelY;
 		planePosition.y-=accelX;
 
 		pajaroAnimTime+=deltaTime;
@@ -217,9 +219,22 @@ public class Begin extends ApplicationAdapter {
 		//también los muve por la pantalla, al igual que el terreno
 		deltaPosition=planePosition.x-planeDefaultPosition.x;
 		planeRect.set(planePosition.x, planePosition.y, 120, 100);
-		//TODO solucionar colisiones con pilares
-		for(Vector2 vec: pillars)
+
+
+
+		if(planeRect.overlaps(obstacleRect))
 		{
+			if(gameState != GameState.GAME_OVER)
+			{
+				gameState = GameState.GAME_OVER;
+				return;
+			}
+		}
+
+		//TODO pulir colisiones con pilares
+		//Este trozo de código pertenecía al libro, el problema es que el pilar coge la posición del último, por lo que
+		//nunca colisionaba con el pajaro
+		/*for(Vector2 vec: pillars){
 			vec.x-=deltaPosition;
 			if(vec.x+pillarUp.getRegionWidth()<-10)
 			{
@@ -233,18 +248,33 @@ public class Begin extends ApplicationAdapter {
 			{
 				obstacleRect.set(vec.x,
 						480-pillarDown.getRegionHeight(),
-						pillarUp.getRegionWidth(), pillarUp.getRegionHeight());
+						pillarDown.getRegionWidth(), pillarDown.getRegionHeight());
 			}
+		}*/
+		//se recorre array al revés para que el último elemento sea el referenciado
+		for( int i=pillars.size-1; i>=0; i--){
+			pillars.get(i).x-=deltaPosition;
+
+			if(pillars.get(i).x+pillarUp.getRegionWidth()<-10)
+				pillars.removeValue(pillars.get(i), false);
+
+			if(pillars.get(i).y==1)
+				obstacleRect.set(pillars.get(i).x+25, 0, pillarUp.getRegionWidth()-20,
+						pillarUp.getRegionHeight()-10);
+			else
+				obstacleRect.set(pillars.get(i).x+25,
+						480-pillarDown.getRegionHeight(),
+						pillarDown.getRegionWidth()-20, pillarDown.getRegionHeight());
 		}
-		if(lastPillarPosition.x<400)
+
+		Gdx.app.debug("PajaroX", String.valueOf(planeRect.getX()+120));
+		Gdx.app.debug("PajaroY", String.valueOf(planeRect.getY())+100);
+		Gdx.app.debug("PilarX", String.valueOf(obstacleRect.getX()));
+		Gdx.app.debug("PilarY", String.valueOf(obstacleRect.getY()));
+
+		if(lastPillarPosition.x<400 || pillars.size==0)
 			addPillar();
-		if(planeRect.overlaps(obstacleRect))
-		{
-			if(gameState != GameState.GAME_OVER)
-			{
-				gameState = GameState.GAME_OVER;
-			}
-		}
+
 		planePosition.x=planeDefaultPosition.x; // se resetea para que el terreno se dibuje bien (ya que el terreno depende de tu posicion)
 
 		//comprobamos si hay que resetear el terreno para no ver el final
@@ -256,9 +286,7 @@ public class Begin extends ApplicationAdapter {
 
 
 		if(gameState == GameState.INIT || gameState == GameState.GAME_OVER)
-		{
 			return;
-		}
 
 		if(planePosition.y < terrainBelow.getRegionHeight() -20||
 				planePosition.y + 73 > 480 - terrainBelow.getRegionHeight())
@@ -266,8 +294,10 @@ public class Begin extends ApplicationAdapter {
 			if(gameState != GameState.GAME_OVER)
 			{
 				gameState = GameState.GAME_OVER;
+				return;
 			}
 		}
+
 	}
 
 	private void drawScene(){
@@ -282,12 +312,10 @@ public class Begin extends ApplicationAdapter {
 
 		//pinto los pilares
 		for(Vector2 vec: pillars) {
-			if (vec.y == 1) {
+			if (vec.y == 1)
 				batch.draw(pillarUp, vec.x, 0);
-			} else {
-				batch.draw(pillarDown, vec.x,
-						480 - pillarDown.getRegionHeight());
-			}
+			else
+				batch.draw(pillarDown, vec.x, 480 - pillarDown.getRegionHeight());
 		}
 
 		//dibujamos el terreno
@@ -304,15 +332,13 @@ public class Begin extends ApplicationAdapter {
 					tocadoPantalla.y-50f);
 		}
 		*/
+
 		if(gameState == GameState.INIT)
-		{
 			batch.draw(tap, planePosition.x+300, planePosition.y-50);
-		}
 
 		if(gameState == GameState.GAME_OVER)
-		{
 			batch.draw(gameOver, 400-206, 240-80);
-		}
+
 		batch.end();
 	}
 
@@ -333,6 +359,7 @@ public class Begin extends ApplicationAdapter {
 
 	private void addPillar()
 	{
+		Gdx.app.debug("Pinta", "Pilar "+pillars.size);
 		Vector2 pillarPosition=new Vector2();
 
 		if(pillars.size==0)
