@@ -11,7 +11,9 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
@@ -67,9 +69,10 @@ public class Begin extends ApplicationAdapter {
 	Vector2 lastPillarPosition=new Vector2(); //almacena el último pilar
 	float deltaPosition;
 
-	//rectangulos para coprobar el overlap entre el pajaro y los pilares
+	//objetos para las colisiones entre pilares y pajaro
 	Rectangle planeRect=new Rectangle();
-	Rectangle obstacleRect=new Rectangle();
+	Polygon obstacleTri = new Polygon();
+	float[] arrVertices = new float[6];
 
 	@Override
 	public void create () {
@@ -147,7 +150,9 @@ public class Begin extends ApplicationAdapter {
 		planeDefaultPosition.set(50, 190);
 		planePosition.set(planeDefaultPosition.x, planeDefaultPosition.y);
 		scrollVelocity.set(4, 0);
-		obstacleRect.set(0, 0,0 , 0); //reseteo sus valores para poder reiniciar partida
+		obstacleTri.setPosition(0, 0);
+		arrVertices = new float[]{0,0,0,0,0,0};
+		obstacleTri.setVertices(arrVertices);
 	}
 
 	private void updateScene(){
@@ -221,17 +226,10 @@ public class Begin extends ApplicationAdapter {
 		planeRect.set(planePosition.x, planePosition.y, 120, 100);
 
 
+		if(lastPillarPosition.x<400 || pillars.size==0)
+			addPillar();
 
-		if(planeRect.overlaps(obstacleRect))
-		{
-			if(gameState != GameState.GAME_OVER)
-			{
-				gameState = GameState.GAME_OVER;
-				return;
-			}
-		}
 
-		//TODO pulir colisiones con pilares
 		//Este trozo de código pertenecía al libro, el problema es que el pilar coge la posición del último, por lo que
 		//nunca colisionaba con el pajaro
 		/*for(Vector2 vec: pillars){
@@ -252,28 +250,48 @@ public class Begin extends ApplicationAdapter {
 			}
 		}*/
 		//se recorre array al revés para que el último elemento sea el referenciado
+		int k=0;
 		for( int i=pillars.size-1; i>=0; i--){
 			pillars.get(i).x-=deltaPosition;
-
+			Gdx.app.debug("Pilar Numero"+k, "AAAAAAAAAAA");
 			if(pillars.get(i).x+pillarUp.getRegionWidth()<-10)
 				pillars.removeValue(pillars.get(i), false);
 
-			if(pillars.get(i).y==1)
-				obstacleRect.set(pillars.get(i).x+25, 0, pillarUp.getRegionWidth()-20,
-						pillarUp.getRegionHeight()-10);
-			else
-				obstacleRect.set(pillars.get(i).x+25,
-						480-pillarDown.getRegionHeight(),
-						pillarDown.getRegionWidth()-20, pillarDown.getRegionHeight());
-		}
 
+			if(pillars.get(i).y==1){
+				obstacleTri.setPosition(pillars.get(i).x, 0);
+				arrVertices= new float[] {pillars.get(i).x, 0f, pillars.get(i).x+pillarUp.getRegionWidth(), 0f, pillars.get(i).x+pillarUp.getRegionWidth()*0.6f, pillarUp.getRegionHeight()};
+
+			}
+			else{
+				Gdx.app.debug("Orientacion", "ABAJO:");
+				obstacleTri.setPosition(pillars.get(i).x, 480);
+				arrVertices = new float[] {pillars.get(i).x, 480f, pillars.get(i).x+pillarUp.getRegionWidth(), 480f, pillars.get(i).x+pillarUp.getRegionWidth()*0.6f, 480-pillarUp.getRegionHeight()};
+			}
+
+
+			k++;
+		}
+		obstacleTri.setVertices(arrVertices);
+		Gdx.app.debug("TrianguloX", obstacleTri.getX()+"-"+(obstacleTri.getX()+pillarDown.getRegionWidth()));
+		Gdx.app.debug("TrianguloY", String.valueOf(obstacleTri.getY()));
+
+		Gdx.app.debug("1", arrVertices[0]+","+arrVertices[1]);
+		Gdx.app.debug("2", arrVertices[2]+","+arrVertices[3]);
+		Gdx.app.debug("3", arrVertices[4]+","+arrVertices[5]);
+		//TODO solucionar problema con la altura del pajaro
 		Gdx.app.debug("PajaroX", String.valueOf(planeRect.getX()+120));
 		Gdx.app.debug("PajaroY", String.valueOf(planeRect.getY())+100);
-		Gdx.app.debug("PilarX", String.valueOf(obstacleRect.getX()));
-		Gdx.app.debug("PilarY", String.valueOf(obstacleRect.getY()));
 
-		if(lastPillarPosition.x<400 || pillars.size==0)
-			addPillar();
+
+
+		if(isCollision(obstacleTri, planeRect, arrVertices)){
+			if(gameState != GameState.GAME_OVER)
+			{
+				gameState = GameState.GAME_OVER;
+				return;
+			}
+		}
 
 		planePosition.x=planeDefaultPosition.x; // se resetea para que el terreno se dibuje bien (ya que el terreno depende de tu posicion)
 
@@ -380,5 +398,13 @@ public class Begin extends ApplicationAdapter {
 		}
 		lastPillarPosition=pillarPosition;
 		pillars.add(pillarPosition);
+	}
+
+	private boolean isCollision(Polygon p, Rectangle r, float[] arrVertices) {
+		Polygon rPoly = new Polygon(arrVertices);
+		rPoly.setPosition(r.x, r.y);
+		if (Intersector.overlapConvexPolygons(rPoly, p))
+			return true;
+		return false;
 	}
 }
