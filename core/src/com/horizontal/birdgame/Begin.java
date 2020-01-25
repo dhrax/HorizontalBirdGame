@@ -3,6 +3,7 @@ package com.horizontal.birdgame;
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.FPSLogger;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -11,6 +12,7 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Polygon;
@@ -59,7 +61,7 @@ public class Begin extends ApplicationAdapter {
 	//TODO descomentar para el control por giroscopio
 	int orientation;
 	float accelX;
-	float accelY;
+	//float accelY;
 
 	GameState gameState;
 
@@ -73,6 +75,9 @@ public class Begin extends ApplicationAdapter {
 	Rectangle planeRect=new Rectangle();
 	Polygon obstacleTri = new Polygon();
 	float[] arrVertices = new float[6];
+
+	//TODO descomentar para pintar los poígonos de las colisiones
+	//private ShapeRenderer shapeRenderer;
 
 	@Override
 	public void create () {
@@ -123,6 +128,8 @@ public class Begin extends ApplicationAdapter {
 		pillarUp=atlas.findRegion("rockGrass");
 		pillarDown = atlas.findRegion("rockGrassDown");
 
+
+		//shapeRenderer = new ShapeRenderer();
 		resetScene();
 	}
 
@@ -250,10 +257,9 @@ public class Begin extends ApplicationAdapter {
 			}
 		}*/
 		//se recorre array al revés para que el último elemento sea el referenciado
-		int k=0;
+
 		for( int i=pillars.size-1; i>=0; i--){
 			pillars.get(i).x-=deltaPosition;
-			Gdx.app.debug("Pilar Numero"+k, "AAAAAAAAAAA");
 			if(pillars.get(i).x+pillarUp.getRegionWidth()<-10)
 				pillars.removeValue(pillars.get(i), false);
 
@@ -264,14 +270,15 @@ public class Begin extends ApplicationAdapter {
 
 			}
 			else{
-				Gdx.app.debug("Orientacion", "ABAJO:");
-				obstacleTri.setPosition(pillars.get(i).x, 480);
+				obstacleTri.setPosition(pillars.get(i).x, 480-67); //por alguna razón, tengo que restar tamaño a la
+																	// posicion y inicial, ya que si no, la colision no llega hasta la punta del pilar
 				arrVertices = new float[] {pillars.get(i).x, 480f, pillars.get(i).x+pillarUp.getRegionWidth(), 480f, pillars.get(i).x+pillarUp.getRegionWidth()*0.6f, 480-pillarUp.getRegionHeight()};
+
 			}
-
-
-			k++;
 		}
+
+
+
 		obstacleTri.setVertices(arrVertices);
 		Gdx.app.debug("TrianguloX", obstacleTri.getX()+"-"+(obstacleTri.getX()+pillarDown.getRegionWidth()));
 		Gdx.app.debug("TrianguloY", String.valueOf(obstacleTri.getY()));
@@ -319,6 +326,10 @@ public class Begin extends ApplicationAdapter {
 	}
 
 	private void drawScene(){
+
+
+
+
 		camera.update();
 		batch.setProjectionMatrix(camera.combined);
 		batch.begin();
@@ -351,13 +362,32 @@ public class Begin extends ApplicationAdapter {
 		}
 		*/
 
+
 		if(gameState == GameState.INIT)
 			batch.draw(tap, planePosition.x+300, planePosition.y-50);
 
 		if(gameState == GameState.GAME_OVER)
 			batch.draw(gameOver, 400-206, 240-80);
-
 		batch.end();
+		/*
+		Gdx.gl.glLineWidth(10f);
+		shapeRenderer.setAutoShapeType(true);
+		shapeRenderer.setProjectionMatrix(camera.combined);
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+		shapeRenderer.setColor(Color.BLACK);
+		//shapeRenderer.triangle(arrVertices[0], arrVertices[1], arrVertices[2], arrVertices[3], arrVertices[4], arrVertices[5]);
+		shapeRenderer.polygon(arrVertices);
+		shapeRenderer.end();
+
+		shapeRenderer.setAutoShapeType(true);
+		shapeRenderer.setProjectionMatrix(camera.combined);
+		shapeRenderer.begin();
+		shapeRenderer.setColor(Color.BLACK);
+		//shapeRenderer.triangle(arrVertices[0], arrVertices[1], arrVertices[2], arrVertices[3], arrVertices[4], arrVertices[5]);
+		shapeRenderer.rect(planeRect.x, planeRect.y, 120, 100);
+		shapeRenderer.end();
+		*/
+
 	}
 
 
@@ -403,8 +433,7 @@ public class Begin extends ApplicationAdapter {
 	private boolean isCollision(Polygon p, Rectangle r, float[] arrVertices) {
 		Polygon rPoly = new Polygon(arrVertices);
 		rPoly.setPosition(r.x, r.y);
-		if (Intersector.overlapConvexPolygons(rPoly, p))
-			return true;
-		return false;
+
+		return (Intersector.overlapConvexPolygons(rPoly, p));
 	}
 }
