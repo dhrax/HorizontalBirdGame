@@ -3,16 +3,20 @@ package com.horizontal.birdgame;
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.FPSLogger;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.TextureArray;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Circle;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Polygon;
@@ -27,7 +31,7 @@ import sun.rmi.runtime.Log;
 
 public class Begin extends ApplicationAdapter {
 	SpriteBatch batch; //util para dibujar la misma textura en diferentes posiciones (mejora de rendimiento)
-	Texture img;
+
 	FPSLogger fpsLogger;
 	OrthographicCamera camera; //OrthographicCamera: sirve como ventana del juego, es muy util para juegos 2D donde
 								//se necesite una proyeccion Ortografica, es decir, donde no haya punto de fuga, por lo
@@ -58,6 +62,9 @@ public class Begin extends ApplicationAdapter {
 	private static final float TAP_DRAW_TIME_MAX=1.0f;
 	*/
 
+	//Empaquetados de texturas
+	TextureAtlas atlas, meteorAtlas;
+
 	//TODO descomentar para el control por giroscopio
 	int orientation;
 	float accelX;
@@ -79,12 +86,27 @@ public class Begin extends ApplicationAdapter {
 	//TODO descomentar para pintar los poígonos de las colisiones
 	//private ShapeRenderer shapeRenderer;
 
+	//TODO pulir colisiones con los meteoros
+	//Objetos para los meteoros
+	Array<TextureAtlas.AtlasRegion> meteorTextures = new Array<>();
+	TextureRegion selectedMeteorTexture;
+	boolean meteorInScene;
+	private static final int METEOR_SPEED=60;
+	Vector2 meteorPosition= new Vector2();
+	Vector2 meteorVelocity= new Vector2();
+	float nextMeteorIn; //contador para sacar el siguiente meteoro
+	Circle obstacleMeteoro = new Circle();
+
+	Music backgroundMusic;
+	Sound colisionSound, spawnMeteorSound;
+
+
 	@Override
 	public void create () {
 		Gdx.app.setLogLevel(Application.LOG_DEBUG); //para poder poner logs
 		batch = new SpriteBatch();
 		fpsLogger = new FPSLogger();
-		//img = new Texture("badlogic.jpg");
+
 		camera = new OrthographicCamera();
 		//se puede crear una camara responsive:
 		/*
@@ -99,8 +121,9 @@ public class Begin extends ApplicationAdapter {
 		*/
 
 		//Texturas empaquetadas
-		TextureAtlas atlas = new
-				TextureAtlas(Gdx.files.internal("HorizontalBirdgame.pack"));
+		atlas = new TextureAtlas(Gdx.files.internal("HorizontalBirdgame.pack"));
+		meteorAtlas = new TextureAtlas(Gdx.files.internal("BirdGameMeteorPack.pack"));
+
 		//background = new Texture("background.png"); //no hace falta ya que se ha creado un texture Atlas
 		background = atlas.findRegion("background");
 		//terrainBelow=new TextureRegion(new Texture("groundGrass.png")); //no hace falta ya que se ha creado un texture Atlas
@@ -128,8 +151,23 @@ public class Begin extends ApplicationAdapter {
 		pillarUp=atlas.findRegion("rockGrass");
 		pillarDown = atlas.findRegion("rockGrassDown");
 
-
 		//shapeRenderer = new ShapeRenderer();
+
+		//Texturas de los meteoros
+		meteorTextures.add(meteorAtlas.findRegion("meteorBrown_med1"));
+		meteorTextures.add(meteorAtlas.findRegion("meteorBrown_med3"));
+		meteorTextures.add(meteorAtlas.findRegion("meteorBrown_small1"));
+		meteorTextures.add(meteorAtlas.findRegion("meteorBrown_small2"));
+		meteorTextures.add(meteorAtlas.findRegion("meteorBrown_tiny1"));
+		meteorTextures.add(meteorAtlas.findRegion("meteorBrown_tiny2"));
+
+		//Se pone musica de fondo
+		backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("Music/background.ogg"));
+		backgroundMusic.setLooping(true);
+		backgroundMusic.play();
+
+		colisionSound = Gdx.audio.newSound(Gdx.files.internal("Music/colision.wav"));
+
 		resetScene();
 	}
 
@@ -145,7 +183,13 @@ public class Begin extends ApplicationAdapter {
 	@Override
 	public void dispose () { //destruimos para liberar memoria
 		batch.dispose();
-		img.dispose();
+		atlas.dispose();
+		meteorAtlas.dispose();
+		backgroundMusic.dispose();
+		colisionSound.dispose();
+		spawnMeteorSound.dispose();
+		pillars.clear();
+		meteorTextures.clear();
 	}
 
 	public void resetScene(){ //reseteamos la pantalla (cuando muramos)
@@ -160,6 +204,9 @@ public class Begin extends ApplicationAdapter {
 		obstacleTri.setPosition(0, 0);
 		arrVertices = new float[]{0,0,0,0,0,0};
 		obstacleTri.setVertices(arrVertices);
+		meteorInScene=false;
+		nextMeteorIn=(float)Math.random()*5; //s easigna un valor aleatorio para que cada vez que se comience, salga un meteoro distinto
+		obstacleMeteoro.set(0,0 ,0);
 	}
 
 	private void updateScene(){
@@ -173,6 +220,7 @@ public class Begin extends ApplicationAdapter {
 		 */
 		if(gameState == GameState.GAME_OVER)
 		{
+			backgroundMusic.stop();
 			if(Gdx.input.justTouched()){
 				gameState = GameState.INIT;
 				resetScene();
@@ -181,6 +229,7 @@ public class Begin extends ApplicationAdapter {
 		}
 			if(gameState == GameState.INIT)
 			{
+				backgroundMusic.play();
 				if(Gdx.input.justTouched())
 					gameState = GameState.ACTION;
 				return;
@@ -290,13 +339,40 @@ public class Begin extends ApplicationAdapter {
 		Gdx.app.debug("PajaroX", String.valueOf(planeRect.getX()+120));
 		Gdx.app.debug("PajaroY", String.valueOf(planeRect.getY())+100);
 
+		//vamos moviendo el meteoro hacia la izquierda
+		if(meteorInScene) {
+			meteorPosition.mulAdd(meteorVelocity, deltaTime);
+			meteorPosition.x-=deltaPosition;
+			if(meteorPosition.x<-10)  {
+				meteorInScene=false;
+			}
+		}
+		nextMeteorIn-=deltaTime;
+		//tiempo para el siguiente meteoro
+		if(nextMeteorIn<=0) {
+			launchMeteor();
+		}
 
 
 		if(isCollision(obstacleTri, planeRect, arrVertices)){
 			if(gameState != GameState.GAME_OVER)
 			{
 				gameState = GameState.GAME_OVER;
+				colisionSound.play();
 				return;
+			}
+		}
+
+
+		if(meteorInScene) {
+			obstacleMeteoro.set(meteorPosition.x, meteorPosition.y, selectedMeteorTexture.getRegionWidth()/2);
+
+			if(Intersector.overlaps(obstacleMeteoro, planeRect)){
+				if(gameState != GameState.GAME_OVER){
+					gameState = GameState.GAME_OVER;
+					colisionSound.play();
+					return;
+				}
 			}
 		}
 
@@ -319,6 +395,7 @@ public class Begin extends ApplicationAdapter {
 			if(gameState != GameState.GAME_OVER)
 			{
 				gameState = GameState.GAME_OVER;
+				colisionSound.play();
 				return;
 			}
 		}
@@ -326,10 +403,6 @@ public class Begin extends ApplicationAdapter {
 	}
 
 	private void drawScene(){
-
-
-
-
 		camera.update();
 		batch.setProjectionMatrix(camera.combined);
 		batch.begin();
@@ -361,6 +434,11 @@ public class Begin extends ApplicationAdapter {
 					tocadoPantalla.y-50f);
 		}
 		*/
+
+		//Se pinta el meteoro aleatorio
+		if(meteorInScene) {
+			batch.draw(selectedMeteorTexture, meteorPosition.x, meteorPosition.y);
+		}
 
 
 		if(gameState == GameState.INIT)
@@ -435,5 +513,25 @@ public class Begin extends ApplicationAdapter {
 		rPoly.setPosition(r.x, r.y);
 
 		return (Intersector.overlapConvexPolygons(rPoly, p));
+	}
+
+
+	//funcion que
+	private void launchMeteor() {
+		nextMeteorIn=1.5f+(float)Math.random()*5;
+		//si hay un meteoro en la pantalla, no pintamos otro
+		if(meteorInScene)  {
+			return;
+		}
+		meteorInScene=true;
+		int id= (int)(Math.random()*meteorTextures.size);
+		selectedMeteorTexture=meteorTextures.get(id); //escogemos un meteoro aleatorio
+		meteorPosition.x=810; //ponemos el meteoro inicialmente justo a la derecha de la pantalla
+		meteorPosition.y=(float) (80+Math.random()*320);
+		Vector2 destination=new Vector2(); //creamos un vector que apunte a la parte izquierda de la pantalla
+		destination.x=-10;
+		destination.y=(float) (80+Math.random()*320);
+		destination.sub(meteorPosition).nor(); //normalizamos el vector para darle direccion
+		meteorVelocity.mulAdd(destination, METEOR_SPEED); //añadimos velocidad al meteoro
 	}
 }
