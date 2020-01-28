@@ -2,8 +2,12 @@ package com.horizontal.birdgame;
 
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.assets.AssetManager;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.FPSLogger;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 
@@ -24,6 +28,7 @@ public class Begin extends Game {
     //Viewport viewport; //se utiliza para hacer responsive la palicacion en diferentes resoluciones y tamaños de pantalla
 
     TextureAtlas atlas, meteorAtlas;
+    AssetManager manager = new AssetManager();
 
 
     public Begin(){
@@ -46,11 +51,17 @@ public class Begin extends Game {
 
     @Override
     public void create() {
-        batch = new SpriteBatch();
 
-        //Texturas empaquetadas
-        atlas = new TextureAtlas(Gdx.files.internal("HorizontalBirdgame.pack"));
-        meteorAtlas = new TextureAtlas(Gdx.files.internal("BirdGameMeteorPack.pack"));
+        manager.load("UI/textGameOver.png", Texture.class);
+        manager.load("Music/background.ogg", Music.class);
+        manager.load("Music/colision.wav", Sound.class);
+        manager.load("HorizontalBirdgame.pack", TextureAtlas.class);
+        manager.load("BirdGameMeteorPack.pack", TextureAtlas.class);
+        manager.finishLoading();
+
+        batch = new SpriteBatch();
+        atlas = manager.get("HorizontalBirdgame.pack", TextureAtlas.class);
+        meteorAtlas = manager.get("BirdGameMeteorPack.pack", TextureAtlas.class);
 
         setScreen(new GamePlayScene(this));
     }

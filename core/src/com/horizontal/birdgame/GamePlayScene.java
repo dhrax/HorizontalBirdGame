@@ -4,6 +4,7 @@ import com.badlogic.gdx.Application;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
@@ -42,6 +43,8 @@ public class GamePlayScene extends ScreenAdapter {
 
 
 	TextureAtlas atlas, meteorAtlas;
+
+	AssetManager manager;
 
 	TextureRegion background, terrainBelow, terrainAbove, tap, pillarUp, pillarDown;
 	float terrainOffset;
@@ -109,8 +112,10 @@ public class GamePlayScene extends ScreenAdapter {
 		juego = begin;
 		batch = juego.batch;
 		camera = juego.camera;
+		manager = juego.manager;
 		atlas = juego.atlas;
 		meteorAtlas = juego.meteorAtlas;
+
 
 		Gdx.app.setLogLevel(Application.LOG_DEBUG); //para poder poner logs
 
@@ -120,6 +125,7 @@ public class GamePlayScene extends ScreenAdapter {
 		//terrainBelow=new TextureRegion(new Texture("groundGrass.png")); //no hace falta ya que se ha creado un texture Atlas
 		terrainBelow = atlas.findRegion("groundGrass");
 		tap = atlas.findRegion("tap");
+
 		terrainAbove=new TextureRegion(terrainBelow);
 		terrainAbove.flip(true, true); //convierte terrainAbove en terrainBelow dado la vuelta
 
@@ -153,11 +159,11 @@ public class GamePlayScene extends ScreenAdapter {
 		meteorTextures.add(meteorAtlas.findRegion("meteorBrown_tiny2"));
 
 		//Se pone musica de fondo
-		backgroundMusic = Gdx.audio.newMusic(Gdx.files.internal("Music/background.ogg"));
+		backgroundMusic = manager.get("Music/background.ogg", Music.class);
 		backgroundMusic.setLooping(true);
 		backgroundMusic.play();
 
-		colisionSound = Gdx.audio.newSound(Gdx.files.internal("Music/colision.wav"));
+		colisionSound = manager.get("Music/colision.wav", Sound.class);
 
 		resetScene();
 	}
