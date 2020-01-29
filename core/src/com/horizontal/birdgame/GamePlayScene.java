@@ -29,7 +29,13 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
+import java.util.ArrayList;
+
 import sun.rmi.runtime.Log;
+
+import static com.horizontal.birdgame.PickUp.FUEL;
+import static com.horizontal.birdgame.PickUp.SHIELD;
+import static com.horizontal.birdgame.PickUp.STAR;
 
 public class GamePlayScene extends ScreenAdapter {
 
@@ -91,6 +97,7 @@ public class GamePlayScene extends ScreenAdapter {
 	Polygon obstacleTri = new Polygon();
 	float[] arrVertices = new float[6];
 	Circle obstacleMeteoro = new Circle();
+	Rectangle pickUpRect = new Rectangle();
 
 	//TODO descomentar para pintar los poígonos de las colisiones
 	private ShapeRenderer shapeRenderer;
@@ -108,6 +115,10 @@ public class GamePlayScene extends ScreenAdapter {
 
 	Music backgroundMusic;
 	Sound colisionSound, spawnMeteorSound;
+
+	PickUp pickUp;
+	Vector3 pickupTiming = new Vector3();
+	ArrayList<PickUp> pickupsInScene = new ArrayList<>();
 
 
 	public GamePlayScene (Begin begin) {
@@ -168,6 +179,8 @@ public class GamePlayScene extends ScreenAdapter {
 
 		colisionSound = manager.get("Music/colision.wav", Sound.class);
 
+
+
 		resetScene();
 	}
 
@@ -204,6 +217,8 @@ public class GamePlayScene extends ScreenAdapter {
 		meteorInScene=false;
 		nextMeteorIn=(float)Math.random()*5; //s easigna un valor aleatorio para que cada vez que se comience, salga un meteoro distinto
 		obstacleMeteoro.set(0,0 ,0);
+		pickupTiming.set((float)(0.5+Math.random()*0.5), (float)(0.5+Math.random()*0.5), (float)(0.5+Math.random()*0.5));
+
 	}
 
 	private void updateScene(){
@@ -317,6 +332,12 @@ public class GamePlayScene extends ScreenAdapter {
 			launchMeteor();
 		}
 
+		checkAndCreatePickup(deltaTime);
+
+		for (PickUp p: pickupsInScene){
+			p.pickupPosition.x-=10;
+		}
+
 
 		if(isCollision(obstacleTri, planeRect, arrVertices)){
 			if(gameState != GameState.GAME_OVER)
@@ -384,6 +405,10 @@ public class GamePlayScene extends ScreenAdapter {
 				batch.draw(pillarUp, vec.x, 0);
 			else
 				batch.draw(pillarDown, vec.x, 480 - pillarDown.getRegionHeight());
+		}
+
+		for(PickUp p: pickupsInScene){
+			batch.draw(p.pickupTexture, p.pickupPosition.x, p.pickupPosition.y);
 		}
 
 		//dibujamos el terreno
@@ -519,5 +544,73 @@ public class GamePlayScene extends ScreenAdapter {
 		destination.y=(float) (80+Math.random()*320);
 		destination.sub(meteorPosition).nor(); //normalizamos el vector para darle direccion
 		meteorVelocity.mulAdd(destination, METEOR_SPEED); //añadimos velocidad al meteoro
+	}
+
+
+	private void checkAndCreatePickup(float delta)
+	{
+		Gdx.app.debug("CREA PICKUP", "Si");
+		pickupTiming.sub(delta);
+		if(pickupTiming.x<=0)
+		{
+			pickupTiming.x=(float)(0.5+Math.random()*0.5);
+			if(addPickup(STAR))
+				pickupTiming.x=1+(float)Math.random()*2;
+		}
+		if(pickupTiming.y<=0)
+		{
+			pickupTiming.y=(float)(0.5+Math.random()*0.5);
+			if(addPickup(FUEL))
+				pickupTiming.y=3+(float)Math.random()*2;
+		}
+		if(pickupTiming.z<=0)
+		{
+			pickupTiming.z=(float)(0.5+Math.random()*0.5);
+			if(addPickup(SHIELD))
+				pickupTiming.z=10+(float)Math.random()*3;
+		}
+	}
+
+	private boolean addPickup(int pickupType)
+	{
+		Vector2 randomPosition=new Vector2();
+		randomPosition.x=820;
+		randomPosition.y=(float) (80+Math.random()*320);
+		/*for(Vector2 vec: pillars)
+		{
+			if(vec.y==1)
+			{
+				pickUpRect.set(vec.x , 0, pillarUp.getRegionWidth(),
+						pillarUp.getRegionHeight());
+			}
+			else
+			{
+				pickUpRect.set(vec.x , 480-pillarDown.getRegionHeight(),
+						pillarUp.getRegionWidth(), pillarUp.getRegionHeight());
+			}
+
+		}*/
+		Gdx.app.debug("ANADE PICKUP", "Si");
+		pickUp=new PickUp(pickupType);
+		pickUp.pickupPosition.set(randomPosition);
+		pickupsInScene.add(pickUp);
+		return true;
+	}
+
+	private void pickIt(PickUp pickup)
+	{
+		//pickup.pickupSound.play();
+		switch(pickup.type){
+			case STAR:
+				//starCount+=pickup.pickupValue;
+				break;
+			case SHIELD:
+				//shieldCount=pickup.pickupValue;
+				break;
+			case FUEL:
+				//fuelCount=pickup.pickupValue;
+				break;
+		}
+		pickupsInScene.remove(pickup);
 	}
 }
