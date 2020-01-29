@@ -86,11 +86,14 @@ public class GamePlayScene extends ScreenAdapter {
 
 	//objetos para las colisiones entre pilares y pajaro
 	Rectangle planeRect=new Rectangle();
+	Rectangle terrAboveRect =new Rectangle();
+	Rectangle terrBelowRect =new Rectangle();
 	Polygon obstacleTri = new Polygon();
 	float[] arrVertices = new float[6];
+	Circle obstacleMeteoro = new Circle();
 
 	//TODO descomentar para pintar los poígonos de las colisiones
-	//private ShapeRenderer shapeRenderer;
+	private ShapeRenderer shapeRenderer;
 
 	//TODO pulir colisiones con los meteoros
 	//Objetos para los meteoros
@@ -101,7 +104,7 @@ public class GamePlayScene extends ScreenAdapter {
 	Vector2 meteorPosition= new Vector2();
 	Vector2 meteorVelocity= new Vector2();
 	float nextMeteorIn; //contador para sacar el siguiente meteoro
-	Circle obstacleMeteoro = new Circle();
+
 
 	Music backgroundMusic;
 	Sound colisionSound, spawnMeteorSound;
@@ -148,7 +151,7 @@ public class GamePlayScene extends ScreenAdapter {
 		pillarUp=atlas.findRegion("rockGrass");
 		pillarDown = atlas.findRegion("rockGrassDown");
 
-		//shapeRenderer = new ShapeRenderer();
+		shapeRenderer = new ShapeRenderer();
 
 		//Texturas de los meteoros
 		meteorTextures.add(meteorAtlas.findRegion("meteorBrown_med1"));
@@ -175,7 +178,7 @@ public class GamePlayScene extends ScreenAdapter {
 		updateScene(); //logica del juego
 		drawScene(); //dibuja lo que hay en la pantalla
 	}
-	
+
 	@Override
 	public void dispose () { //destruimos para liberar memoria
 
@@ -221,13 +224,13 @@ public class GamePlayScene extends ScreenAdapter {
 			}
 			return;
 		}
-			if(gameState == GameState.INIT)
-			{
-				backgroundMusic.play();
-				if(Gdx.input.justTouched())
-					gameState = GameState.ACTION;
-				return;
-			}
+		if(gameState == GameState.INIT)
+		{
+			backgroundMusic.play();
+			if(Gdx.input.justTouched())
+				gameState = GameState.ACTION;
+			return;
+		}
 
 
 
@@ -273,32 +276,12 @@ public class GamePlayScene extends ScreenAdapter {
 		//recorre los pilares para ver si hay que añadir uno,
 		//también los muve por la pantalla, al igual que el terreno
 		deltaPosition=planePosition.x-planeDefaultPosition.x;
-		planeRect.set(planePosition.x, planePosition.y, 120, 100);
+		planeRect.set(planePosition.x, planePosition.y+20, 115, 50);
 
 
-		if(lastPillarPosition.x<400 || pillars.size==0)
+		if(lastPillarPosition.x<600 || pillars.size==0)
 			addPillar();
 
-
-		//Este trozo de código pertenecía al libro, el problema es que el pilar coge la posición del último, por lo que
-		//nunca colisionaba con el pajaro
-		/*for(Vector2 vec: pillars){
-			vec.x-=deltaPosition;
-			if(vec.x+pillarUp.getRegionWidth()<-10)
-			{
-				pillars.removeValue(vec, false);
-			}
-			if(vec.y==1)
-			{
-				obstacleRect.set(vec.x, 0, pillarUp.getRegionWidth(),
-						pillarUp.getRegionHeight());
-			}else
-			{
-				obstacleRect.set(vec.x,
-						480-pillarDown.getRegionHeight(),
-						pillarDown.getRegionWidth(), pillarDown.getRegionHeight());
-			}
-		}*/
 		//se recorre array al revés para que el último elemento sea el referenciado
 
 		for( int i=pillars.size-1; i>=0; i--){
@@ -306,32 +289,19 @@ public class GamePlayScene extends ScreenAdapter {
 			if(pillars.get(i).x+pillarUp.getRegionWidth()<-10)
 				pillars.removeValue(pillars.get(i), false);
 
-
 			if(pillars.get(i).y==1){
 				obstacleTri.setPosition(pillars.get(i).x, 0);
 				arrVertices= new float[] {pillars.get(i).x, 0f, pillars.get(i).x+pillarUp.getRegionWidth(), 0f, pillars.get(i).x+pillarUp.getRegionWidth()*0.6f, pillarUp.getRegionHeight()};
-
-			}
-			else{
-				obstacleTri.setPosition(pillars.get(i).x, 480-67); //por alguna razón, tengo que restar tamaño a la
-																	// posicion y inicial, ya que si no, la colision no llega hasta la punta del pilar
+			}else{
+				obstacleTri.setPosition(pillars.get(i).x, 480-50); //por alguna razón, tengo que restar tamaño a la
+				// posicion y inicial, ya que si no, la colision no llega hasta la punta del pilar
 				arrVertices = new float[] {pillars.get(i).x, 480f, pillars.get(i).x+pillarUp.getRegionWidth(), 480f, pillars.get(i).x+pillarUp.getRegionWidth()*0.6f, 480-pillarUp.getRegionHeight()};
 
 			}
 		}
-
-
-
+		Gdx.app.debug("Ancho", String.valueOf(Gdx.graphics.getWidth()));
+		Gdx.app.debug("Alto", String.valueOf(Gdx.graphics.getHeight()));
 		obstacleTri.setVertices(arrVertices);
-		Gdx.app.debug("TrianguloX", obstacleTri.getX()+"-"+(obstacleTri.getX()+pillarDown.getRegionWidth()));
-		Gdx.app.debug("TrianguloY", String.valueOf(obstacleTri.getY()));
-
-		Gdx.app.debug("1", arrVertices[0]+","+arrVertices[1]);
-		Gdx.app.debug("2", arrVertices[2]+","+arrVertices[3]);
-		Gdx.app.debug("3", arrVertices[4]+","+arrVertices[5]);
-		//TODO solucionar problema con la altura del pajaro
-		Gdx.app.debug("PajaroX", String.valueOf(planeRect.getX()+120));
-		Gdx.app.debug("PajaroY", String.valueOf(planeRect.getY())+100);
 
 		//vamos moviendo el meteoro hacia la izquierda
 		if(meteorInScene) {
@@ -359,7 +329,7 @@ public class GamePlayScene extends ScreenAdapter {
 
 
 		if(meteorInScene) {
-			obstacleMeteoro.set(meteorPosition.x, meteorPosition.y, selectedMeteorTexture.getRegionWidth()/2);
+			obstacleMeteoro.set(meteorPosition.x+selectedMeteorTexture.getRegionWidth()/2f, meteorPosition.y+selectedMeteorTexture.getRegionWidth()/2f, selectedMeteorTexture.getRegionWidth()/2);
 
 			if(Intersector.overlaps(obstacleMeteoro, planeRect)){
 				if(gameState != GameState.GAME_OVER){
@@ -379,13 +349,15 @@ public class GamePlayScene extends ScreenAdapter {
 			terrainOffset=-terrainBelow.getRegionWidth();
 
 
-
 		if(gameState == GameState.INIT || gameState == GameState.GAME_OVER)
 			return;
 
-		if(planePosition.y < terrainBelow.getRegionHeight() -20||
-				planePosition.y + 73 > 480 - terrainBelow.getRegionHeight())
-		{
+
+		//TODO sacar fuera del bucle, ya que va a ser constante
+		terrBelowRect.set(0, 0, terrainBelow.getRegionWidth(), terrainBelow.getRegionHeight());
+		terrAboveRect.set(0, 480-terrainAbove.getRegionHeight(), terrainAbove.getRegionWidth(), terrainAbove.getRegionHeight());
+
+		if(planeRect.overlaps(terrAboveRect) || planeRect.overlaps(terrBelowRect)){
 			if(gameState != GameState.GAME_OVER)
 			{
 				gameState = GameState.GAME_OVER;
@@ -442,7 +414,24 @@ public class GamePlayScene extends ScreenAdapter {
 			batch.draw(gameOver, 400-206, 240-80);
 		batch.end();
 		/*
-		Gdx.gl.glLineWidth(10f);
+		Gdx.gl.glLineWidth(5f);
+
+		shapeRenderer.setAutoShapeType(true);
+		shapeRenderer.setProjectionMatrix(camera.combined);
+		shapeRenderer.begin();
+		shapeRenderer.setColor(Color.BLACK);
+		//shapeRenderer.triangle(arrVertices[0], arrVertices[1], arrVertices[2], arrVertices[3], arrVertices[4], arrVertices[5]);
+		shapeRenderer.rect(terrBelowRect.x, terrBelowRect.y, terrBelowRect.width, terrBelowRect.height);
+		shapeRenderer.end();
+
+		shapeRenderer.setAutoShapeType(true);
+		shapeRenderer.setProjectionMatrix(camera.combined);
+		shapeRenderer.begin();
+		shapeRenderer.setColor(Color.BLACK);
+		//shapeRenderer.triangle(arrVertices[0], arrVertices[1], arrVertices[2], arrVertices[3], arrVertices[4], arrVertices[5]);
+		shapeRenderer.rect(terrAboveRect.x, terrAboveRect.y, terrAboveRect.width, terrAboveRect.height);
+		shapeRenderer.end();
+
 		shapeRenderer.setAutoShapeType(true);
 		shapeRenderer.setProjectionMatrix(camera.combined);
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
@@ -456,9 +445,20 @@ public class GamePlayScene extends ScreenAdapter {
 		shapeRenderer.begin();
 		shapeRenderer.setColor(Color.BLACK);
 		//shapeRenderer.triangle(arrVertices[0], arrVertices[1], arrVertices[2], arrVertices[3], arrVertices[4], arrVertices[5]);
-		shapeRenderer.rect(planeRect.x, planeRect.y, 120, 100);
+		shapeRenderer.rect(planeRect.x, planeRect.y, planeRect.width, planeRect.height);
 		shapeRenderer.end();
+
+		if(meteorInScene) {
+			shapeRenderer.setAutoShapeType(true);
+			shapeRenderer.setProjectionMatrix(camera.combined);
+			shapeRenderer.begin();
+			shapeRenderer.setColor(Color.BLACK);
+			//shapeRenderer.triangle(arrVertices[0], arrVertices[1], arrVertices[2], arrVertices[3], arrVertices[4], arrVertices[5]);
+			shapeRenderer.circle(obstacleMeteoro.x, obstacleMeteoro.y, obstacleMeteoro.radius);
+			shapeRenderer.end();
+		}
 		*/
+
 
 	}
 
@@ -480,8 +480,7 @@ public class GamePlayScene extends ScreenAdapter {
 		}
 		else
 		{
-			pillarPosition.x=lastPillarPosition.x+(float) (600 +
-					Math.random()*600);
+			pillarPosition.x=lastPillarPosition.x+ 600;
 		}
 		if(MathUtils.randomBoolean())
 		{

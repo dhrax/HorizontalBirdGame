@@ -10,6 +10,8 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 
 public class Begin extends Game {
 
@@ -43,10 +45,10 @@ public class Begin extends Game {
 			cam = new OrthographicCamera(30, 30 * (h / w));
 		 */
         camera.setToOrtho(false, screenWidth, screenHeight); //no hace falta esta linea, porque al implementar eñ VIewPort, la de abajo la sustituye
-        /* Utilizado para mantener el tamaño de pantalla en distintos dispositivos
-		camera.position.set(400,240,0);
-		viewport = new FitViewport(800, 480, camera);
-		*/
+        /* Utilizado para mantener el tamaño de pantalla en distintos dispositivos*/
+		//camera.position.set(400,240,0);
+
+		//viewport = new FitViewport(800, 480, camera);
     }
 
     @Override
@@ -80,10 +82,11 @@ public class Begin extends Game {
     }
 
     //Sirve para que, al cambiar el tamaño de la ventana, el viewport lo recoja y se actualice
-	/*
+    /*
 	@Override
 	public void resize (int width, int height)
 	{
 		viewport.update(width, height);
-	}*/
+	}
+    */
 }
