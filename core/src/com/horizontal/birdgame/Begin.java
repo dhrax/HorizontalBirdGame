@@ -32,6 +32,8 @@ public class Begin extends Game {
     TextureAtlas atlas, meteorAtlas;
     AssetManager manager = new AssetManager();
 
+    HUD hud;
+
 
     public Begin(){
 
@@ -64,6 +66,8 @@ public class Begin extends Game {
         batch = new SpriteBatch();
         atlas = manager.get("HorizontalBirdgame.pack", TextureAtlas.class);
         meteorAtlas = manager.get("BirdGameMeteorPack.pack", TextureAtlas.class);
+
+        hud = new HUD();
 
         setScreen(new GamePlayScene(this));
     }

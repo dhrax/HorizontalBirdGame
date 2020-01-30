@@ -120,15 +120,19 @@ public class GamePlayScene extends ScreenAdapter {
 	Vector3 pickupTiming = new Vector3();
 	ArrayList<PickUp> pickupsInScene = new ArrayList<>();
 
+	HUD hud;
+
 
 	public GamePlayScene (Begin begin) {
 
-		juego = begin;
-		batch = juego.batch;
-		camera = juego.camera;
-		manager = juego.manager;
-		atlas = juego.atlas;
-		meteorAtlas = juego.meteorAtlas;
+		this.juego = begin;
+		this.batch = juego.batch;
+		this.camera = juego.camera;
+		this.manager = juego.manager;
+		this.atlas = juego.atlas;
+		this.meteorAtlas = juego.meteorAtlas;
+		this.hud = juego.hud;
+
 
 
 		Gdx.app.setLogLevel(Application.LOG_DEBUG); //para poder poner logs
@@ -218,7 +222,7 @@ public class GamePlayScene extends ScreenAdapter {
 		nextMeteorIn=(float)Math.random()*5; //s easigna un valor aleatorio para que cada vez que se comience, salga un meteoro distinto
 		obstacleMeteoro.set(0,0 ,0);
 		pickupTiming.set((float)(0.5+Math.random()*0.5), (float)(0.5+Math.random()*0.5), (float)(0.5+Math.random()*0.5));
-
+		hud.inicializarHUD();
 	}
 
 	private void updateScene(){
@@ -247,7 +251,9 @@ public class GamePlayScene extends ScreenAdapter {
 			return;
 		}
 
-
+		//TODO conseguir que la bajada del cambio del indicador de comida sea mas suave
+		hud.setContadorComida(hud.getContadorComida()-6*deltaTime);
+		hud.setPorcentajeComida((int) (hud.getIndicadorComida().getWidth() * hud.getContadorComida()/100));
 
 		/**
 		 * Esto permite desplazar el pajaro dependiendo de la posicion donde se pulse
@@ -432,8 +438,15 @@ public class GamePlayScene extends ScreenAdapter {
 		}
 
 
+		batch.setColor(Color.BLACK);
+		batch.draw(hud.getIndicadorComida(), 10, 350);
+		batch.setColor(Color.WHITE);
+		batch.draw(hud.getIndicadorComida(),10,350,0,0,hud.getPorcentajeComida(),hud.getIndicadorComida().getHeight());
+
 		if(gameState == GameState.INIT)
 			batch.draw(tap, planePosition.x+300, planePosition.y-50);
+
+
 
 		if(gameState == GameState.GAME_OVER)
 			batch.draw(gameOver, 400-206, 240-80);
