@@ -1,18 +1,15 @@
 package com.horizontal.birdgame;
 
 import com.badlogic.gdx.Application;
-import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.FPSLogger;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.TextureArray;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
@@ -26,12 +23,8 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.viewport.FitViewport;
-import com.badlogic.gdx.utils.viewport.Viewport;
 
 import java.util.ArrayList;
-
-import sun.rmi.runtime.Log;
 
 import static com.horizontal.birdgame.PickUp.FUEL;
 import static com.horizontal.birdgame.PickUp.SHIELD;
@@ -54,13 +47,9 @@ public class GamePlayScene extends ScreenAdapter {
 
 	TextureRegion background, terrainBelow, terrainAbove, tap, pillarUp, pillarDown;
 	float terrainOffset;
-	Animation pajaro;
-	float pajaroAnimTime;
-	Vector2 planeVelocity = new Vector2();
-	Vector2 planePosition= new Vector2();
-	Vector2 planeDefaultPosition= new Vector2();
+
 	Vector2 gravity= new Vector2();
-	private static final Vector2 damping = new Vector2(0.99f,0.99f); //funciona friccion para reducir la velocidad del pajaro
+	private static final Vector2 damping = new Vector2(0.99f,0.99f); //funciona friccion para reducir la velocidad del personaje
 
 	Texture gameOver;
 
@@ -90,7 +79,7 @@ public class GamePlayScene extends ScreenAdapter {
 	Vector2 lastPillarPosition=new Vector2(); //almacena el último pilar
 	float deltaPosition;
 
-	//objetos para las colisiones entre pilares y pajaro
+	//objetos para las colisiones entre pilares y personaje
 	Rectangle planeRect=new Rectangle();
 	Rectangle terrAboveRect =new Rectangle();
 	Rectangle terrBelowRect =new Rectangle();
@@ -122,6 +111,8 @@ public class GamePlayScene extends ScreenAdapter {
 
 	HUD hud;
 
+	Personaje personaje;
+
 
 	public GamePlayScene (Begin begin) {
 
@@ -134,6 +125,9 @@ public class GamePlayScene extends ScreenAdapter {
 		this.hud = juego.hud;
 
 
+        personaje = new Personaje(0.2f,
+				new TextureRegion[]{atlas.findRegion("1"),atlas.findRegion("2"), atlas.findRegion("3"), atlas.findRegion("4")},
+				Animation.PlayMode.LOOP);
 
 		Gdx.app.setLogLevel(Application.LOG_DEBUG); //para poder poner logs
 
@@ -146,13 +140,6 @@ public class GamePlayScene extends ScreenAdapter {
 
 		terrainAbove=new TextureRegion(terrainBelow);
 		terrainAbove.flip(true, true); //convierte terrainAbove en terrainBelow dado la vuelta
-
-		pajaro = new Animation(0.2f, atlas.findRegion("1"),
-				atlas.findRegion("2"),
-				atlas.findRegion("3"),
-				atlas.findRegion("4")); //crea una animacion rotando los frames cada X tiempo
-		pajaro.setPlayMode(Animation.PlayMode.LOOP); //ya que la animacion es un bucle
-		pajaroAnimTime=0;
 
 		//TODO descomentar para el control tactil
 		//tapIndicator = atlas.findRegion("tapTick");
@@ -183,8 +170,6 @@ public class GamePlayScene extends ScreenAdapter {
 
 		colisionSound = manager.get("Music/colision.wav", Sound.class);
 
-
-
 		resetScene();
 	}
 
@@ -209,11 +194,15 @@ public class GamePlayScene extends ScreenAdapter {
 	public void resetScene(){ //reseteamos la pantalla (cuando muramos)
 		pillars.clear();
 		terrainOffset=0;
-		pajaroAnimTime=0;
-		planeVelocity.set(400, 0);
+
 		gravity.set(0, -4);
-		planeDefaultPosition.set(50, 190);
-		planePosition.set(planeDefaultPosition.x, planeDefaultPosition.y);
+
+		//inicializacion personaje
+		personaje.setPersonajeFrameAct(0);
+		personaje.setVelocidadPersonaje(400, 0);
+		personaje.setPosicionDefectoPersonaje(50, 190);
+		personaje.setPosicionPersonaje(personaje.getPosicionDefectoPersonajeX(), personaje.getPosicionDefectoPersonajeY());
+
 		scrollVelocity.set(4, 0);
 		obstacleTri.setPosition(0, 0);
 		arrVertices = new float[]{0,0,0,0,0,0};
@@ -256,14 +245,14 @@ public class GamePlayScene extends ScreenAdapter {
 		hud.setPorcentajeComida((int) (hud.getIndicadorComida().getWidth() * hud.getContadorComida()/100));
 
 		/**
-		 * Esto permite desplazar el pajaro dependiendo de la posicion donde se pulse
+		 * Esto permite desplazar el personaje dependiendo de la posicion donde se pulse
 		 */
 		/*if(Gdx.input.justTouched())
 		{
 			tocadoPantalla.set(Gdx.input.getX(),Gdx.input.getY(),0);
 			camera.unproject(tocadoPantalla);
 
-			//necesitamos estas dos líneas para realizar el cáculo entre la posicion del pajaro y donde se ha pulsado
+			//necesitamos estas dos líneas para realizar el cáculo entre la posicion del personaje y donde se ha pulsado
 			tmpVector.set(planePosition.x,planePosition.y);
 			tmpVector.sub( tocadoPantalla.x, tocadoPantalla.y).nor(); //sustrae al vector sus parametros y .nor() lo normaliza
 			//se normaliza para saber la direccion del vector
@@ -283,21 +272,24 @@ public class GamePlayScene extends ScreenAdapter {
 		accelX = Gdx.input.getAccelerometerX();
 		//lo comento porque no hacen falta ya que tenemos una velocidad predeterminada
 		//accelY = Gdx.input.getAccelerometerY();
-		//planePosition.x+=accelY;
-		planePosition.y-=accelX;
+		//personaje.setPosicionPersonaje( personaje.getPosicionPersonajeX()+accelY, personaje.getPosicionPersonajeY());
+		personaje.setPosicionPersonaje(personaje.getPosicionPersonajeX(), personaje.getPosicionPersonajeY()-accelX);
 
-		pajaroAnimTime+=deltaTime;
-		planeVelocity.scl(damping); //reducimos velocidad
-		//planeVelocity.add(gravity); //añadimos la gravedad a la trayectoria
-		planeVelocity.add(scrollVelocity);
+		personaje.setPersonajeFrameAct(personaje.getPersonajeFrameAct()+deltaTime);
+		personaje.setVelocidadPersonaje(personaje.getVelocidadPersonaje().scl(damping)); //reducimos velocidad
 
-		planePosition.mulAdd(planeVelocity, deltaTime); //multiplica escalarmente
-		terrainOffset-=planePosition.x-planeDefaultPosition.x; //valor utilizado para hacer que es terreno se mueva hacia la izquierda
+		//personaje.setVelocidadPersonaje(personaje.getVelocidadPersonaje().add(gravity)); //añadimos la gravedad a la trayectoria
+
+		personaje.setVelocidadPersonaje(personaje.getVelocidadPersonaje().add(scrollVelocity));
+
+		personaje.setPosicionPersonaje(personaje.getPosicionPersonaje().mulAdd(personaje.getVelocidadPersonaje(), deltaTime)); //multiplica escalarmente
+
+		terrainOffset-= personaje.getPosicionPersonajeX()-personaje.getPosicionDefectoPersonajeX(); //valor utilizado para hacer que es terreno se mueva hacia la izquierda
 
 		//recorre los pilares para ver si hay que añadir uno,
 		//también los muve por la pantalla, al igual que el terreno
-		deltaPosition=planePosition.x-planeDefaultPosition.x;
-		planeRect.set(planePosition.x, planePosition.y+20, 115, 50);
+		deltaPosition=personaje.getPosicionPersonajeX()-personaje.getPosicionDefectoPersonajeX();
+		planeRect.set(personaje.getPosicionPersonajeX(), personaje.getPosicionPersonajeY()+20, 115, 50);
 
 
 		if(lastPillarPosition.x<600 || pillars.size==0)
@@ -367,8 +359,8 @@ public class GamePlayScene extends ScreenAdapter {
 			}
 		}
 
-		planePosition.x=planeDefaultPosition.x; // se resetea para que el terreno se dibuje bien (ya que el terreno depende de tu posicion)
-
+		// se resetea para que el terreno se dibuje bien (ya que el terreno depende de tu posicion)
+		personaje.setPosicionPersonaje(personaje.getPosicionDefectoPersonajeX(), personaje.getPosicionPersonajeY());
 		//comprobamos si hay que resetear el terreno para no ver el final
 		if(terrainOffset*-1>terrainBelow.getRegionWidth())
 			terrainOffset=0;
@@ -422,7 +414,7 @@ public class GamePlayScene extends ScreenAdapter {
 		batch.draw(terrainBelow, terrainOffset + terrainBelow. getRegionWidth(), 0);//se dibujan dos veces para dar la impresion de scroll infinito
 		batch.draw(terrainAbove, terrainOffset, 480 - terrainAbove. getRegionHeight());
 		batch.draw(terrainAbove, terrainOffset + terrainAbove. getRegionWidth(), 480 - terrainAbove.getRegionHeight());
-		batch.draw((TextureRegion) pajaro.getKeyFrame(pajaroAnimTime), planePosition.x, planePosition.y);
+		batch.draw(personaje.getTexturaActual(), personaje.getPosicionPersonajeX(), personaje.getPosicionPersonajeY());
 
 		/* //TODO descomentar para el control tactil
 		if(tapDrawTime>0)
@@ -444,7 +436,7 @@ public class GamePlayScene extends ScreenAdapter {
 		batch.draw(hud.getIndicadorComida(),10,350,0,0,hud.getPorcentajeComida(),hud.getIndicadorComida().getHeight());
 
 		if(gameState == GameState.INIT)
-			batch.draw(tap, planePosition.x+300, planePosition.y-50);
+			batch.draw(tap, 500, 100);
 
 
 
