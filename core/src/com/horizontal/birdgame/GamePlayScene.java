@@ -11,6 +11,7 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
@@ -112,7 +113,7 @@ public class GamePlayScene extends ScreenAdapter {
 	HUD hud;
 
 	Personaje personaje;
-
+    BitmapFont font;
 
 	public GamePlayScene (Begin begin) {
 
@@ -123,11 +124,12 @@ public class GamePlayScene extends ScreenAdapter {
 		this.atlas = juego.atlas;
 		this.meteorAtlas = juego.meteorAtlas;
 		this.hud = juego.hud;
+		this.font = juego.font;
 
-
-        personaje = new Personaje(0.2f,
-				new TextureRegion[]{atlas.findRegion("1"),atlas.findRegion("2"), atlas.findRegion("3"), atlas.findRegion("4")},
-				Animation.PlayMode.LOOP);
+		//TODO limpiar estas tres líneas
+		Array<TextureRegion> arr = new Array<>();
+		arr.add(atlas.findRegion("1"),atlas.findRegion("2"), atlas.findRegion("3"), atlas.findRegion("4"));
+        personaje = new Personaje(0.2f, arr, Animation.PlayMode.LOOP);
 
 		Gdx.app.setLogLevel(Application.LOG_DEBUG); //para poder poner logs
 
@@ -189,6 +191,7 @@ public class GamePlayScene extends ScreenAdapter {
 		spawnMeteorSound.dispose();
 		pillars.clear();
 		meteorTextures.clear();
+		hud.dispose();
 	}
 
 	public void resetScene(){ //reseteamos la pantalla (cuando muramos)
@@ -414,7 +417,7 @@ public class GamePlayScene extends ScreenAdapter {
 		batch.draw(terrainBelow, terrainOffset + terrainBelow. getRegionWidth(), 0);//se dibujan dos veces para dar la impresion de scroll infinito
 		batch.draw(terrainAbove, terrainOffset, 480 - terrainAbove. getRegionHeight());
 		batch.draw(terrainAbove, terrainOffset + terrainAbove. getRegionWidth(), 480 - terrainAbove.getRegionHeight());
-		batch.draw(personaje.getTexturaActual(), personaje.getPosicionPersonajeX(), personaje.getPosicionPersonajeY());
+		batch.draw(personaje.personajeAnimation.getKeyFrame(personaje.getPersonajeFrameAct()), personaje.getPosicionPersonajeX(), personaje.getPosicionPersonajeY());
 
 		/* //TODO descomentar para el control tactil
 		if(tapDrawTime>0)
@@ -434,6 +437,8 @@ public class GamePlayScene extends ScreenAdapter {
 		batch.draw(hud.getIndicadorComida(), 10, 350);
 		batch.setColor(Color.WHITE);
 		batch.draw(hud.getIndicadorComida(),10,350,0,0,hud.getPorcentajeComida(),hud.getIndicadorComida().getHeight());
+
+		font.draw(batch, String.valueOf(personaje.puntos), 700, 450);
 
 		if(gameState == GameState.INIT)
 			batch.draw(tap, 500, 100);

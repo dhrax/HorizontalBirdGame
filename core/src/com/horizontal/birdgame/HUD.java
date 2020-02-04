@@ -37,4 +37,8 @@ public class HUD {
         setPorcentajeComida(indicadorComida.getWidth());
         contadorComida=100;
     }
+
+    public void dispose(){
+        indicadorComida.dispose();
+    }
 }

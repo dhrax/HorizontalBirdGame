@@ -4,25 +4,29 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.Array;
 
 public class Personaje {
 
-    private Animation personajeAnimation;
+    public Animation<TextureRegion> personajeAnimation;
     private float personajeFrameAct;
     private Vector2 velocidadPersonaje;
     private Vector2 posicionPersonaje;
     private Vector2 posicionDefectoPersonaje;
-    private TextureRegion[] arrTexturasPersonaje;
+    private Array<TextureRegion> arrTexturasPersonaje;
+    int puntos;
 
 
-    public Personaje(float duracionFrame, TextureRegion[] arrTexturasPersonaje, Animation.PlayMode repeticion){
+    public Personaje(float duracionFrame, Array<TextureRegion> arrTexturasPersonaje, Animation.PlayMode repeticion){
         this.arrTexturasPersonaje = arrTexturasPersonaje;
-        personajeAnimation = new Animation(duracionFrame, this.arrTexturasPersonaje, repeticion);
+        personajeAnimation = new Animation<TextureRegion>(duracionFrame, this.arrTexturasPersonaje, repeticion);
         this.personajeFrameAct =0;
         this.velocidadPersonaje = new Vector2();
         this.posicionPersonaje= new Vector2();
         this.posicionDefectoPersonaje= new Vector2();
+        this.puntos=0;
     }
+
 
     public Animation getPersonajeAnimation() {
         return personajeAnimation;
@@ -32,17 +36,11 @@ public class Personaje {
         this.personajeAnimation = personajeAnimation;
     }
 
-    public TextureRegion getTexturaActual(){
-        return this.arrTexturasPersonaje[(int) getPersonajeFrameAct()];
-    }
-
     public float getPersonajeFrameAct() {
         return this.personajeFrameAct;
     }
 
     public void setPersonajeFrameAct(float personajeFrameAct) {
-        if (this.personajeFrameAct>3)
-            personajeFrameAct=0;
         this.personajeFrameAct = personajeFrameAct;
     }
 
