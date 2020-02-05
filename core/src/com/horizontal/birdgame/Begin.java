@@ -74,7 +74,8 @@ public class Begin extends Game {
 
         hud = new HUD();
 
-        setScreen(new GamePlayScene(this));
+        setScreen(new prueba(this));
+        //setScreen(new GamePlayScene(this));
     }
 
     @Override
