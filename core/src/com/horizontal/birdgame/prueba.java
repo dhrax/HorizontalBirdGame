@@ -6,6 +6,7 @@ import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -14,6 +15,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 
 public class prueba extends ScreenAdapter implements InputProcessor {
 
@@ -21,8 +23,8 @@ public class prueba extends ScreenAdapter implements InputProcessor {
     SpriteBatch batch;
     OrthographicCamera camera;
     TextureAtlas atlas;
-    TextureRegion tx;
-    Rectangle textureBounds;
+    TextureRegion pilar, pajaro;
+    Rectangle pilarRect=new Rectangle(), pajaroRect=new Rectangle();
     ShapeRenderer shapeRenderer;
     boolean ex;
 
@@ -31,18 +33,18 @@ public class prueba extends ScreenAdapter implements InputProcessor {
         this.batch = juego.batch;
         this.camera = juego.camera;
         this.atlas = juego.atlas;
-
-        tx = atlas.findRegion("background");
-        tx.setRegionX(0);
-        tx.setRegionY(0);
-        Gdx.app.setLogLevel(Application.LOG_DEBUG);
-        shapeRenderer = new ShapeRenderer();
-        ex=false;
-
-        int ancho = Gdx.graphics.getWidth();
-        int alto = Gdx.graphics.getHeight();
-        textureBounds=new Rectangle(tx.getRegionX(),tx.getRegionY(),ancho,alto);
         Gdx.input.setInputProcessor(this);
+        Gdx.app.setLogLevel(Application.LOG_DEBUG);
+
+        pilar = new TextureRegion(new Texture("rockGrass.png"));
+        pajaro = new TextureRegion(new Texture("PNG/Dragon Orange/1.png"));
+
+        shapeRenderer = new ShapeRenderer();
+
+
+        pilarRect.set(0, 0, pilar.getRegionWidth(), pilar.getRegionHeight());
+        pajaroRect.set(400, 0, pajaro.getRegionWidth(), pajaro.getRegionHeight());
+
     }
 
     @Override
@@ -57,19 +59,26 @@ public class prueba extends ScreenAdapter implements InputProcessor {
     private void draw() {
         camera.update();
         batch.setProjectionMatrix(camera.combined);
+        Gdx.gl.glClearColor(1, 1, 1, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         batch.begin();
-
-        batch.draw(tx, 0, 0);
+        batch.enableBlending();
+        batch.draw(pilar, 0, 0, pilar.getRegionWidth(), pilar.getRegionHeight());
+        batch.draw(pajaro, 400, 0, pajaro.getRegionWidth(), pajaro.getRegionHeight());
 
         batch.end();
-        if(ex){
+
             Gdx.gl.glLineWidth(5f);
             shapeRenderer.setAutoShapeType(true);
+            shapeRenderer.setProjectionMatrix(camera.combined);
             shapeRenderer.begin();
             shapeRenderer.setColor(Color.BLACK);
-            shapeRenderer.rect(textureBounds.x, textureBounds.y, textureBounds.width, textureBounds.height);
+            shapeRenderer.rect(pilarRect.x, pilarRect.y, pilarRect.width, pilarRect.height);
+            shapeRenderer.rect(pajaroRect.x, pajaroRect.y, pajaroRect.width, pajaroRect.height);
             shapeRenderer.end();
-        }
+
+
+
 
     }
 
@@ -122,11 +131,15 @@ public class prueba extends ScreenAdapter implements InputProcessor {
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
         Gdx.app.debug("X", String.valueOf(screenX));
         Gdx.app.debug("Y", String.valueOf(screenY));
-
-        if(textureBounds.contains(screenX,screenY))
+        if(pilarRect.contains(screenX,screenY))
         {
-            Gdx.app.debug("Textura tocada", "SI");
-            juego.setScreen(new GamePlayScene((juego)));
+            Gdx.app.debug("--PILAR TOCADO--", "SI");
+            //juego.setScreen(new GamePlayScene((juego)));
+        }
+        if(pajaroRect.contains(screenX,screenY))
+        {
+            Gdx.app.debug("--PAJARO TOCADO--", "SI");
+            //juego.setScreen(new GamePlayScene((juego)));
         }
 
         return true;
